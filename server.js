@@ -1,23 +1,29 @@
 import express from "express";
 import bodyParser from "body-parser";
+import axios from "axios";
 import { extract } from "langextract";
 
 const app = express();
 app.use(bodyParser.json({ limit: "2mb" }));
 
-// Endpoint do parsowania HTML
 app.post("/extract", async (req, res) => {
   try {
-    const { html } = req.body;
+    const { html, url } = req.body;
 
-    if (!html) {
-      return res.status(400).json({ error: "Missing html" });
+    let sourceHtml = html;
+    if (!sourceHtml && url) {
+      const response = await axios.get(url, { timeout: 10000 });
+      sourceHtml = response.data;
     }
 
-    const result = await extract(html);
+    if (!sourceHtml) {
+      return res.status(400).json({ error: "Missing html or url" });
+    }
+
+    const result = await extract(sourceHtml);
     res.json(result);
   } catch (err) {
-    console.error("❌ Error:", err);
+    console.error("❌ Error:", err.message);
     res.status(500).json({ error: "Server error" });
   }
 });
